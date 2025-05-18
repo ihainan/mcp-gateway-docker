@@ -9,6 +9,7 @@ services:
       - "23000:3000"
     volumes:
       - ./config.yaml:/app/config.yaml
+      - ./mcp-data:/app/mcp-data
     environment:
       - TZ=Asia/Shanghai
     restart: unless-stopped
