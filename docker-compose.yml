@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   mcp-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ihainan/mcp-gateway:latest
     ports:
       - "23000:3000"
     volumes:
