@@ -33,6 +33,7 @@ interface ServerConfig {
   command: string;
   args: string[];
   path?: string;
+  env?: string[];
 }
 
 interface GatewayConfig {
@@ -50,7 +51,7 @@ class MCPServer {
     ) {}
 }
 
-// We’ll store session info and track timeouts
+// We'll store session info and track timeouts
 interface SessionData {
   serverProcess: StdioClientTransport;
   lastActive: number; // timestamp of last request
@@ -87,7 +88,17 @@ async function getOrCreateSession(sessionId: string, serverName: string, config:
   const stdioTransport = new StdioClientTransport({
     command: config.command,
     args: config.args,
-    env: process.env as Record<string, string>
+    env: {
+      ...process.env as Record<string, string>,
+      ...(config.env?.reduce((acc, envStr) => {
+        const [key, value] = envStr.split('=');
+        if (key && value) {
+          // 去掉可能存在的引号
+          acc[key] = value.replace(/^["']|["']$/g, '');
+        }
+        return acc;
+      }, {} as Record<string, string>) || {})
+    }
   });
 
   await stdioTransport.start();
@@ -176,7 +187,7 @@ class MCPGateway {
         return;
       }
 
-      // If it starts with /api/, it’s a REST call
+      // If it starts with /api/, it's a REST call
       if ((req.url || "").startsWith("/api/")) {
         await handleRestRequest(req, res, this.config);
         return;
@@ -207,7 +218,17 @@ class MCPGateway {
           const stdioTransport = new StdioClientTransport({
             command: serverConfig.command,
             args: serverConfig.args,
-            env: process.env as Record<string, string>,
+            env: {
+              ...process.env as Record<string, string>,
+              ...(serverConfig.env?.reduce((acc, envStr) => {
+                const [key, value] = envStr.split('=');
+                if (key && value) {
+                  // 去掉可能存在的引号
+                  acc[key] = value.replace(/^["']|["']$/g, '');
+                }
+                return acc;
+              }, {} as Record<string, string>) || {})
+            }
           });
 
           // Create SSE transport with just the path portion
@@ -383,7 +404,7 @@ async function handleRestRequest(
 
   req.on("end", async () => {
     try {
-      const parsedBody = JSON.parse(body); // user’s tool input
+      const parsedBody = JSON.parse(body); // user's tool input
       // Prepare JSON-RPC for MCP
       const message = {
         jsonrpc: "2.0",
@@ -399,7 +420,7 @@ async function handleRestRequest(
       const stdioTransport = await getOrCreateSession(sessionId, serverName, config.servers[serverName]);
 
       // Wrap in a small function that awaits the next response
-      // You’d typically have a queue in real usage; for simplicity, we’ll
+      // You'd typically have a queue in real usage; for simplicity, we'll
       // just listen for the next message event.
       const response = await sendAndWaitForResponse(stdioTransport, message);
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -411,7 +432,7 @@ async function handleRestRequest(
   });
 }
 
-// Very simple “send and wait” helper
+// Very simple "send and wait" helper
 function sendAndWaitForResponse(stdioTransport: StdioClientTransport, message: any): Promise<any> {
   return new Promise((resolve, reject) => {
     const onMsg = (msg: any) => {
@@ -443,7 +464,17 @@ async function dumpSchemas(config: GatewayConfig, format: 'json' | 'yaml') {
     const stdio = new StdioClientTransport({
       command: serverConfig.command,
       args: serverConfig.args,
-      env: process.env as Record<string, string>
+      env: {
+        ...process.env as Record<string, string>,
+        ...(serverConfig.env?.reduce((acc, envStr) => {
+          const [key, value] = envStr.split('=');
+          if (key && value) {
+            // 去掉可能存在的引号
+            acc[key] = value.replace(/^["']|["']$/g, '');
+          }
+          return acc;
+        }, {} as Record<string, string>) || {})
+      }
     });
     await stdio.start();
 
